@@ -1,6 +1,6 @@
-# Discord Card Bot
+# CardSlinger
 
-A Discord bot that distributes disposable virtual cards (VCCs) to staff one at a time via slash commands. Built for teams that need to issue single-use cards per order — replacing manual card managers with automated, trackable distribution.
+A Discord bot for managing and distributing cards to your team. Staff request cards on demand, one at a time, with full admin controls, activity logging, and an interactive card lifecycle — all through slash commands.
 
 ## Features
 
@@ -25,7 +25,7 @@ A Discord bot that distributes disposable virtual cards (VCCs) to staff one at a
 | Command | Description |
 |---|---|
 | `/resetuser @user` | Force-release a user's assigned card back to the pool |
-| `/toggle` | Enable or disable the card bot (blocks `/card` when off) |
+| `/toggle` | Enable or disable CardSlinger (blocks `/card` when off) |
 
 ### Admin Commands — Configuration
 | Command | Description |
@@ -126,7 +126,7 @@ Duplicate card numbers are automatically skipped when loading.
 ## File Structure
 
 ```
-discord-card-bot/
+cardslinger/
 ├── bot.py              # The bot (single file, everything included)
 ├── cards.db            # SQLite database (auto-created on first run)
 ├── requirements.txt
