@@ -1,78 +1,89 @@
 # CardSlinger
 
-A Discord bot for managing and distributing cards to your team. Staff request cards on demand, one at a time, with full admin controls, activity logging, and an interactive card lifecycle — all through slash commands.
+**Sling cards to your team, one at a time.**
 
-## Features
+CardSlinger is a Discord bot that manages and distributes cards to your team through slash commands. Load your cards, set permissions, and let your team request what they need — with built-in safeguards, admin controls, and full activity logging.
 
-### Staff Commands
+> **Why "CardSlinger"?** It slings cards — one at a time, on demand, to whoever needs one.
+
+---
+
+## Use Cases
+
+- Distributing virtual cards (VCCs) to staff for purchases
+- Issuing gift cards, promo codes, or license keys to a team
+- Any workflow where items need to be handed out one at a time with tracking
+
+---
+
+## How It Works
+
+1. An admin loads cards into the bot (CSV upload or manual entry)
+2. A team member runs `/card` and gets one card assigned to them
+3. They mark the card with a button:
+   - **Used** — done, card is consumed forever
+   - **Not Used** — returns it to the pool (with confirmation)
+   - **Error** — flags it as bad, auto-assigns a new one
+4. They can't request another card until the current one is resolved
+
+That's it. No spreadsheets, no DMs, no manual tracking.
+
+---
+
+## Commands
+
+### Staff
 | Command | Description |
 |---|---|
-| `/card` | Request a card (one at a time, requires configured role) |
-| `/mycard` | View your currently assigned card again |
+| `/card` | Request a card (one at a time) |
+| `/mycard` | View your currently assigned card |
 
-### Admin Commands — Pool Management
+### Admin — Pool Management
 | Command | Description |
 |---|---|
 | `/loadcards` | Bulk-load cards from a CSV file |
-| `/addcard` | Manually add a single card to the pool |
-| `/removecard` | Remove a specific card from the pool by card number |
-| `/purgepool` | Bulk-remove available cards (with optional provider/count filters) |
-| `/exportpool` | Download the current pool as a CSV file (filterable by status) |
-| `/cardstatus` | View pool statistics (available / assigned / used / errors) |
-| `/clearcards` | Delete all used and errored cards from the internal database |
+| `/addcard` | Add a single card manually |
+| `/removecard` | Remove a specific card by number |
+| `/purgepool` | Bulk-remove available cards (with optional filters) |
+| `/exportpool` | Download the pool as a CSV (filterable by status) |
+| `/cardstatus` | View pool stats |
+| `/clearcards` | Clear used/errored cards from the database |
 
-### Admin Commands — Operations
+### Admin — Operations
 | Command | Description |
 |---|---|
-| `/resetuser @user` | Force-release a user's assigned card back to the pool |
-| `/toggle` | Enable or disable CardSlinger (blocks `/card` when off) |
+| `/resetuser @user` | Force-release a user's card back to the pool |
+| `/toggle` | Enable or disable CardSlinger |
 
-### Admin Commands — Configuration
+### Admin — Configuration
 | Command | Description |
 |---|---|
-| `/setadminrole @role` | Set the admin role (required for all admin commands + low stock pings) |
+| `/setadminrole @role` | Set the admin role (for admin commands + low stock pings) |
 | `/setcardrole @role` | Set the role required to use `/card` |
-| `/setlogchannel #channel` | Set the admin log channel for activity tracking |
+| `/setlogchannel #channel` | Set the log channel for activity tracking |
 | `/setlowstock 10` | Set the low stock warning threshold |
 
-### Card Lifecycle
+---
 
-1. Admin uploads a CSV (or adds cards manually) → cards enter the **available** pool
-2. User runs `/card` → one card is **assigned** to them
-3. User clicks a button:
-   - **Used** — card is consumed (can never be reissued)
-   - **Not Used** — two-step confirmation, then card returns to the available pool
-   - **Error** — card is marked bad (never reused), and a new card is auto-assigned
+## Safeguards
 
-### Safeguards
-
-- A user cannot request a new card until their current one is resolved
-- Cards marked Used or Error are **never** returned to the pool
-- "Not Used" requires explicit confirmation to prevent accidental returns
-- Buttons only work for the user the card was assigned to
+- One card at a time per user — no hoarding
+- Used and errored cards are **never** recycled
+- "Not Used" requires a confirmation step to prevent accidents
+- Buttons only work for the assigned user
 - Persistent buttons survive bot restarts
-- Low stock warnings ping the admin role when the pool runs low
-- Admin can disable the bot with `/toggle` to pause all card requests
-- Multi-server support — each server has its own independent settings
+- Low stock warnings ping your admin role
+- Multi-server support — each server has independent settings
 
-## Setup
+---
 
-### Option A: Run with Python
+## Quick Start
 
-#### 1. Create a Discord Bot
-
-1. Go to https://discord.com/developers/applications
-2. Click **New Application** → name it → go to the **Bot** tab
-3. Click **Reset Token** and copy the token
-4. Under **Privileged Gateway Intents**, enable **Server Members Intent**
-5. Go to **OAuth2 → URL Generator**, select scopes `bot` + `applications.commands`
-6. Under Bot Permissions, select: `Send Messages`, `Embed Links`, `Use Slash Commands`, `Read Message History`
-7. Copy the generated URL and open it in your browser to invite the bot to your server
-
-#### 2. Install & Run
+### Option A: Python
 
 ```bash
-cd discord-card-bot
+git clone https://github.com/davidajudua/cardslinger.git
+cd cardslinger
 
 python3 -m venv venv
 source venv/bin/activate   # macOS/Linux
@@ -81,34 +92,48 @@ source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 
 cp .env.example .env
-# Edit .env and paste your bot token
+# Edit .env and paste your Discord bot token
 
 python bot.py
 ```
 
-### Option B: Run with Docker
+### Option B: Docker
 
 ```bash
-cd discord-card-bot
+git clone https://github.com/davidajudua/cardslinger.git
+cd cardslinger
 
 cp .env.example .env
-# Edit .env and paste your bot token
+# Edit .env and paste your Discord bot token
 
 docker compose up -d
 ```
 
-The bot runs in the background and auto-restarts if it crashes.
+Auto-restarts on crash. View logs with `docker compose logs -f`.
 
-- View logs: `docker compose logs -f`
-- Stop: `docker compose down`
+---
 
-### First-Time Discord Setup
+## Creating a Discord Bot
 
-1. Create a role for admins and run `/setadminrole @YourAdminRole`
-2. Create a role for card access (e.g. "Card Permissions") and run `/setcardrole @CardRole`
-3. Create an admin-only channel and run `/setlogchannel #card-logs`
-4. Upload your cards with `/loadcards` and attach a CSV file
-5. Staff can now request cards with `/card`
+1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
+2. **New Application** → name it → go to the **Bot** tab
+3. **Reset Token** → copy it (this goes in your `.env`)
+4. Enable **Server Members Intent** under Privileged Gateway Intents
+5. Go to **OAuth2 → URL Generator** → select `bot` + `applications.commands`
+6. Under Bot Permissions: `Send Messages`, `Embed Links`, `Use Slash Commands`, `Read Message History`
+7. Open the generated URL to invite the bot to your server
+
+---
+
+## First-Time Setup (in Discord)
+
+1. `/setadminrole @YourAdminRole` — who can manage the bot
+2. `/setcardrole @YourTeamRole` — who can request cards
+3. `/setlogchannel #logs` — where activity gets logged
+4. `/loadcards` — upload a CSV to fill the pool
+5. Your team can now use `/card`
+
+---
 
 ## CSV Format
 
@@ -119,26 +144,28 @@ A,374512349876001,11/2029,4821,10001
 M,4000123456789010,06/2028,331,30301
 ```
 
-The `provider` column can be anything — it's displayed exactly as written.
+The `provider` column is freeform — it displays exactly as written. Duplicates are automatically skipped.
 
-Duplicate card numbers are automatically skipped when loading.
+---
 
 ## File Structure
 
 ```
 cardslinger/
-├── bot.py              # The bot (single file, everything included)
-├── cards.db            # SQLite database (auto-created on first run)
+├── bot.py              # The entire bot (single file)
+├── cards.db            # SQLite database (auto-created)
 ├── requirements.txt
-├── .env                # Your bot token (not committed to git)
+├── .env                # Your bot token (not committed)
 ├── .env.example
 ├── .gitignore
-├── sample_cards.csv    # Example CSV format
+├── sample_cards.csv
 ├── Dockerfile
 ├── docker-compose.yml
 ├── LICENSE
 └── README.md
 ```
+
+---
 
 ## License
 
