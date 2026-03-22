@@ -84,16 +84,17 @@ That's it. No spreadsheets, no DMs, no manual tracking.
 ```bash
 git clone https://github.com/davidajudua/cardslinger.git
 cd cardslinger
-
 python3 -m venv venv
-source venv/bin/activate   # macOS/Linux
-# venv\Scripts\activate    # Windows
-
+source venv/bin/activate
 pip install -r requirements.txt
-
 cp .env.example .env
-# Edit .env and paste your Discord bot token
+```
 
+> **Windows?** Use `venv\Scripts\activate` instead of `source venv/bin/activate`.
+
+Open the `.env` file in any text editor and replace `your-bot-token-here` with your actual bot token. Then start the bot:
+
+```bash
 python bot.py
 ```
 
@@ -102,10 +103,12 @@ python bot.py
 ```bash
 git clone https://github.com/davidajudua/cardslinger.git
 cd cardslinger
-
 cp .env.example .env
-# Edit .env and paste your Discord bot token
+```
 
+Open the `.env` file and replace `your-bot-token-here` with your actual bot token. Then:
+
+```bash
 docker compose up -d
 ```
 
