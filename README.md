@@ -1,32 +1,60 @@
 # CardSlinger
 
-**Sling cards to your team, one at a time.**
+**Hand out single-use cards to a team — one at a time, with tracking — instead of a shared spreadsheet.**
 
-CardSlinger is a Discord bot that manages and distributes cards to your team through slash commands. Load your cards, set permissions, and let your team request what they need — with built-in safeguards, admin controls, and full activity logging.
-
-> **Why "CardSlinger"?** It slings cards — one at a time, on demand, to whoever needs one.
-
----
-
-## Use Cases
-
-- Distributing virtual cards (VCCs) to staff for purchases
-- Issuing gift cards, promo codes, or license keys to a team
-- Any workflow where items need to be handed out one at a time with tracking
+CardSlinger is a Discord-native distribution system for handing controlled, single-use items to a
+team and knowing exactly where each one went. The canonical use case is a company issuing
+**employee expense cards** for purchases, but it works for any resource that must be handed out one
+at a time with an audit trail — gift cards, license keys, promo codes.
 
 ---
 
-## How It Works
+## The problem it solves
 
-1. An admin loads cards into the bot (CSV upload or manual entry)
-2. A team member runs `/card` and gets one card assigned to them
-3. They mark the card with a button:
-   - **Used** — done, card is consumed forever
-   - **Not Used** — returns it to the pool (with confirmation)
-   - **Error** — flags it as bad, auto-assigns a new one
-4. They can't request another card until the current one is resolved
+Distributing cards to a team by hand is slow and leaky: numbers get copied into DMs and
+spreadsheets, the same card gets handed to two people, no one can say which card was used or by
+whom, and there's no record when something goes wrong. CardSlinger replaces that with a single
+self-serve flow where **every card has exactly one owner at a time and every state change is logged.**
 
-That's it. No spreadsheets, no DMs, no manual tracking.
+## Who it's for
+
+Admins who need to distribute cards to a team without manual tracking, and team members who just
+need one card, on demand, without pinging anyone.
+
+## How it works
+
+1. An admin loads cards into the pool (CSV upload or manual entry).
+2. A team member runs `/card` and is assigned exactly one card.
+3. They resolve it with a button:
+   - **Used** — consumed forever (never recycled)
+   - **Not Used** — returned to the pool (requires a confirmation step)
+   - **Error** — flagged as bad; a fresh card is auto-assigned
+4. They can't request another card until the current one is resolved.
+
+No spreadsheets, no DMs, no manual reconciliation.
+
+---
+
+## Engineering & design decisions
+
+These are the deliberate trade-offs that make it safe to put in front of a team:
+
+- **One card per user at a time.** Prevents hoarding and double-assignment by construction, not by
+  policy — a user simply can't hold two.
+- **Used/errored cards are never recycled.** Eliminates the worst failure mode (re-handing a spent card).
+- **Destructive actions are guarded.** "Not Used" requires a confirmation; buttons only respond to
+  the assigned user; persistent buttons survive bot restarts.
+- **Everything is auditable.** Every assignment, resolution, and admin action lands in a configurable
+  log channel — you can reconstruct the full history of any card.
+- **Multi-tenant by default.** Each Discord server keeps independent settings, roles, and pool.
+- **Operational safety nets.** Low-stock warnings ping the admin role; duplicate cards are skipped on load.
+
+## Architecture
+
+- **Single-file Python Discord bot** (`bot.py`) backed by **SQLite** (`cards.db`, auto-created) —
+  intentionally minimal so it's trivial to read, audit, and self-host.
+- **Stateless restarts:** persistent component IDs mean in-flight cards and buttons survive a redeploy.
+- **Two deploy paths:** bare Python (venv) or Docker Compose with auto-restart.
 
 ---
 
@@ -58,22 +86,10 @@ That's it. No spreadsheets, no DMs, no manual tracking.
 ### Admin — Configuration
 | Command | Description |
 |---|---|
-| `/setadminrole @role` | Set the admin role (for admin commands + low stock pings) |
+| `/setadminrole @role` | Set the admin role (admin commands + low-stock pings) |
 | `/setcardrole @role` | Set the role required to use `/card` |
 | `/setlogchannel #channel` | Set the log channel for activity tracking |
-| `/setlowstock 10` | Set the low stock warning threshold |
-
----
-
-## Safeguards
-
-- One card at a time per user — no hoarding
-- Used and errored cards are **never** recycled
-- "Not Used" requires a confirmation step to prevent accidents
-- Buttons only work for the assigned user
-- Persistent buttons survive bot restarts
-- Low stock warnings ping your admin role
-- Multi-server support — each server has independent settings
+| `/setlowstock 10` | Set the low-stock warning threshold |
 
 ---
 
@@ -85,14 +101,12 @@ That's it. No spreadsheets, no DMs, no manual tracking.
 git clone https://github.com/davidajudua/cardslinger.git
 cd cardslinger
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate            # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-> **Windows?** Use `venv\Scripts\activate` instead of `source venv/bin/activate`.
-
-Open the `.env` file in any text editor and replace `your-bot-token-here` with your actual bot token. Then start the bot:
+Open `.env`, replace `your-bot-token-here` with your bot token, then:
 
 ```bash
 python bot.py
@@ -103,40 +117,28 @@ python bot.py
 ```bash
 git clone https://github.com/davidajudua/cardslinger.git
 cd cardslinger
-cp .env.example .env
+cp .env.example .env                 # add your bot token
+docker compose up -d                 # auto-restarts on crash; logs: docker compose logs -f
 ```
-
-Open the `.env` file and replace `your-bot-token-here` with your actual bot token. Then:
-
-```bash
-docker compose up -d
-```
-
-Auto-restarts on crash. View logs with `docker compose logs -f`.
 
 ---
 
 ## Creating a Discord Bot
 
-1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
-2. **New Application** → name it → go to the **Bot** tab
-3. **Reset Token** → copy it (this goes in your `.env`)
-4. Enable **Server Members Intent** under Privileged Gateway Intents
-5. Go to **OAuth2 → URL Generator** → select `bot` + `applications.commands`
-6. Under Bot Permissions: `Send Messages`, `Embed Links`, `Use Slash Commands`, `Read Message History`
-7. Open the generated URL to invite the bot to your server
-
----
+1. [discord.com/developers/applications](https://discord.com/developers/applications) → **New Application** → **Bot** tab
+2. **Reset Token** → copy it into your `.env`
+3. Enable **Server Members Intent** under Privileged Gateway Intents
+4. **OAuth2 → URL Generator** → select `bot` + `applications.commands`
+5. Bot Permissions: `Send Messages`, `Embed Links`, `Use Slash Commands`, `Read Message History`
+6. Open the generated URL to invite the bot
 
 ## First-Time Setup (in Discord)
 
-1. `/setadminrole @YourAdminRole` — who can manage the bot
-2. `/setcardrole @YourTeamRole` — who can request cards
-3. `/setlogchannel #logs` — where activity gets logged
+1. `/setadminrole @YourAdminRole`
+2. `/setcardrole @YourTeamRole`
+3. `/setlogchannel #logs`
 4. `/loadcards` — upload a CSV to fill the pool
-5. Your team can now use `/card`
-
----
+5. Team can now use `/card`
 
 ## CSV Format
 
@@ -147,26 +149,7 @@ A,374512349876001,11/2029,4821,10001
 M,4000123456789010,06/2028,331,30301
 ```
 
-The `provider` column is freeform — it displays exactly as written. Duplicates are automatically skipped.
-
----
-
-## File Structure
-
-```
-cardslinger/
-├── bot.py              # The entire bot (single file)
-├── cards.db            # SQLite database (auto-created)
-├── requirements.txt
-├── .env                # Your bot token (not committed)
-├── .env.example
-├── .gitignore
-├── sample_cards.csv
-├── Dockerfile
-├── docker-compose.yml
-├── LICENSE
-└── README.md
-```
+The `provider` column is freeform and displays exactly as written. Duplicates are skipped automatically.
 
 ---
 
